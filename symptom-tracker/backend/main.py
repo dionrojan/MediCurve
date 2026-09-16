@@ -6,6 +6,7 @@ natural language symptom parsing, and clinical baseline reference.
 
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
+from datetime import date
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -94,6 +95,22 @@ class UrgentVisitRequest(BaseModel):
 
 
 # -------------------------------------------------------------------
+# Auth Request Models
+# -------------------------------------------------------------------
+DEMO_PASSWORD = "medicurve123"
+
+class LoginRequest(BaseModel):
+    patient_id: str = Field(..., description="Patient ID (e.g. P101)")
+    password: str = Field(..., description="Patient portal password")
+
+
+class LoginResponse(BaseModel):
+    patient_id: str
+    name: str
+    token: str  # In demo mode this is just the patient_id; swap for JWT in production
+
+
+# -------------------------------------------------------------------
 # Lifespan: Auto-seed on startup
 # -------------------------------------------------------------------
 @asynccontextmanager
@@ -126,6 +143,25 @@ app.add_middleware(
 # -------------------------------------------------------------------
 # Routes
 # -------------------------------------------------------------------
+@app.post("/auth/login", response_model=LoginResponse)
+def patient_login(payload: LoginRequest):
+    """
+    Demo patient authentication.
+    Verifies the patient_id exists in the store and checks the shared demo password.
+    In production, replace with proper JWT-based authentication.
+    """
+    patient = store.get_patient(payload.patient_id.upper())
+    if not patient:
+        raise HTTPException(status_code=401, detail="Invalid Patient ID or password.")
+    if payload.password != DEMO_PASSWORD:
+        raise HTTPException(status_code=401, detail="Invalid Patient ID or password.")
+    return LoginResponse(
+        patient_id=patient.id,
+        name=patient.name,
+        token=patient.id,  # Demo token: just the patient ID
+    )
+
+
 @app.get("/")
 def get_root():
     """System health check & clinical cohort info."""
