@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Activity, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { loginPatient } from '../api/auth';
 import { useAuth } from '../hooks/useAuth';
@@ -195,6 +195,10 @@ export function PatientLogin() {
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
+
+        <p style={{ fontSize: 14, color: '#64748b', textAlign: 'center', marginTop: 24 }}>
+          Don't have an account? <Link to="/signup" style={{ color: '#0ea5e9', fontWeight: 600, textDecoration: 'none' }}>Register here</Link>
+        </p>
 
         {/* Security note */}
         <div style={{
