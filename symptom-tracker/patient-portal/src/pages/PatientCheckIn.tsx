@@ -31,6 +31,7 @@ export function PatientCheckIn() {
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState('');
   const [aiDetected, setAiDetected] = useState<Record<string, boolean>>({});
+  const [rawParsed, setRawParsed] = useState<any>(null);
 
   const [facialPain, setFacialPain] = useState(0);
   const [congestion, setCongestion] = useState(0);
@@ -59,14 +60,21 @@ export function PatientCheckIn() {
     try {
       const parsed = await parseToCheckIn(rawNote);
       const detected: Record<string, boolean> = {};
-      if (parsed.facial_pain !== undefined) { setFacialPain(parsed.facial_pain); detected.facial_pain = true; }
-      if (parsed.congestion !== undefined)  { setCongestion(parsed.congestion);  detected.congestion = true; }
-      if (parsed.fever !== undefined)       { setFever(parsed.fever);            detected.fever = true; }
-      if (parsed.energy !== undefined)      { setEnergy(parsed.energy);          detected.energy = true; }
-      if (parsed.rash !== undefined)        { setRash(parsed.rash);              detected.rash = true; }
-      if (parsed.nausea !== undefined)      { setNausea(parsed.nausea);          detected.nausea = true; }
-      if (parsed.diarrhea !== undefined)    { setDiarrhea(parsed.diarrhea);      detected.diarrhea = true; }
+      
+      const sym = parsed.suggested_symptoms;
+      const se = parsed.suggested_side_effects;
+
+      if (sym?.facial_pain !== undefined) { setFacialPain(sym.facial_pain); detected.facial_pain = true; }
+      if (sym?.congestion !== undefined)  { setCongestion(sym.congestion);  detected.congestion = true; }
+      if (sym?.fever !== undefined)       { setFever(sym.fever);            detected.fever = true; }
+      if (sym?.energy !== undefined)      { setEnergy(sym.energy);          detected.energy = true; }
+      if (se?.rash !== undefined)         { setRash(se.rash);               detected.rash = true; }
+      if (se?.nausea !== undefined)       { setNausea(se.nausea);           detected.nausea = true; }
+      if (se?.diarrhea !== undefined)     { setDiarrhea(se.diarrhea);       detected.diarrhea = true; }
+      
+      setRawParsed(parsed.raw_parsed);
       setAiDetected(detected);
+      setStep('symptoms');
     } catch {
       setParseError('AI analysis unavailable — please fill in symptoms manually.');
     } finally {
@@ -84,6 +92,7 @@ export function PatientCheckIn() {
         side_effects: { rash, diarrhea, nausea },
         adherence,
         raw_notes: rawNote || undefined,
+        raw_parsed: rawParsed || undefined,
       });
       setResult(checkin);
       setStep('result');

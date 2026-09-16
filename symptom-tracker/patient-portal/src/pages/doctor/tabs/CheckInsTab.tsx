@@ -79,6 +79,40 @@ function CheckInCard({ data }: { data: CheckIn }) {
                   <span style={{ color: '#94a3b8' }}>No free-text notes provided.</span>
                 )}
               </div>
+
+              {data.raw_parsed && (
+                <div style={{ marginTop: 24, padding: 16, background: '#f5f3ff', borderRadius: 12, border: '1px solid #ede9fe' }}>
+                  <div style={{ fontSize: 13, color: '#6d28d9', fontWeight: 700, marginBottom: 12, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Bot size={16} /> AI Summary Keywords
+                  </div>
+                  
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6, fontWeight: 600 }}>SYMPTOMS DETECTED</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {data.raw_parsed.symptom_mentions?.length > 0 ? (
+                        data.raw_parsed.symptom_mentions.map((s: string, idx: number) => (
+                          <span key={idx} style={{ background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>{s}</span>
+                        ))
+                      ) : (
+                        <span style={{ fontSize: 12, color: '#94a3b8' }}>None detected</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6, fontWeight: 600 }}>RED FLAGS DETECTED</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {data.raw_parsed.red_flag_keywords?.length > 0 ? (
+                        data.raw_parsed.red_flag_keywords.map((r: string, idx: number) => (
+                          <span key={idx} style={{ background: '#fce7f3', color: '#be185d', padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>{r}</span>
+                        ))
+                      ) : (
+                        <span style={{ fontSize: 12, color: '#94a3b8' }}>None detected</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <div style={{ marginTop: 24 }}>
                 <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase' }}>Adherence Report</div>
