@@ -11,25 +11,43 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 try:
-    from .models import Patient, CheckIn, Symptoms, SideEffects, Alert
+    from .models import (
+        Patient,
+        CheckIn,
+        Symptoms,
+        SideEffects,
+        Alert,
+        DoctorIntervention,
+        InterventionAction,
+        VisitUrgency,
+    )
     from .baseline import (
         BASELINE_TRAJECTORY,
         EXPECTED_SIDE_EFFECTS,
         CRITICAL_CHECKPOINT_DAY,
     )
     from .alert_engine import evaluate_checkin
-    from .parser import parse_text
+    from .parser import parse_text, map_note_to_checkin
     from .seed_data import seed_demo_data
     from . import store
 except (ImportError, ValueError):
-    from models import Patient, CheckIn, Symptoms, SideEffects, Alert
+    from models import (
+        Patient,
+        CheckIn,
+        Symptoms,
+        SideEffects,
+        Alert,
+        DoctorIntervention,
+        InterventionAction,
+        VisitUrgency,
+    )
     from baseline import (
         BASELINE_TRAJECTORY,
         EXPECTED_SIDE_EFFECTS,
         CRITICAL_CHECKPOINT_DAY,
     )
     from alert_engine import evaluate_checkin
-    from parser import parse_text
+    from parser import parse_text, map_note_to_checkin
     from seed_data import seed_demo_data
     import store
 
@@ -56,6 +74,23 @@ class CreatePatientRequest(BaseModel):
 
 class ParseNoteRequest(BaseModel):
     text: str = Field(..., description="Free-text symptom notes from patient")
+
+
+class InterventionRequest(BaseModel):
+    action: InterventionAction
+    notes: str = Field(..., min_length=2, description="Clinical rationale charted by the physician")
+    prescribed_medication: Optional[str] = Field(default=None, description="Updated medication if switched")
+    requires_immediate_visit: bool = Field(default=False, description="Whether an in-person visit is requested")
+    visit_urgency: Optional[VisitUrgency] = Field(default=None, description="Urgency level for clinic visit")
+    patient_message: Optional[str] = Field(default=None, description="Notification message sent to patient")
+    doctor_name: str = Field(default="Attending Physician", description="Physician taking action")
+
+
+class UrgentVisitRequest(BaseModel):
+    urgency: VisitUrgency = Field(default="SAME_DAY_CLINIC", description="Level of urgency")
+    notes: str = Field(..., min_length=2, description="Clinical reason for in-person recall")
+    patient_message: str = Field(..., min_length=5, description="Instructions dispatched to patient")
+    doctor_name: str = Field(default="Attending Physician")
 
 
 # -------------------------------------------------------------------
@@ -186,6 +221,64 @@ def create_checkin(patient_id: str, payload: CheckInRequest):
     return recorded
 
 
+@app.post("/patients/{patient_id}/intervene", response_model=DoctorIntervention)
+def record_intervention(patient_id: str, payload: InterventionRequest):
+    """
+    Records a clinical intervention (medication switch, allergy discontinuation, etc.).
+    Automatically updates the patient's active medication if changed, and updates triage status.
+    """
+    patient = store.get_patient(patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail=f"Patient '{patient_id}' not found.")
+
+    intervention = DoctorIntervention(
+        patient_id=patient_id,
+        action=payload.action,
+        notes=payload.notes,
+        prescribed_medication=payload.prescribed_medication,
+        requires_immediate_visit=payload.requires_immediate_visit,
+        visit_urgency=payload.visit_urgency,
+        patient_message=payload.patient_message,
+        doctor_name=payload.doctor_name,
+    )
+
+    recorded = store.add_intervention(patient_id, intervention)
+    return recorded
+
+
+@app.post("/patients/{patient_id}/urgent-visit", response_model=DoctorIntervention)
+def request_urgent_visit(patient_id: str, payload: UrgentVisitRequest):
+    """
+    Issues an immediate clinic recall / urgent visit notice for the patient.
+    Sets patient's triage status to VISIT_REQUESTED and dispatches patient instructions.
+    """
+    patient = store.get_patient(patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail=f"Patient '{patient_id}' not found.")
+
+    intervention = DoctorIntervention(
+        patient_id=patient_id,
+        action="REQUEST_IMMEDIATE_VISIT",
+        notes=payload.notes,
+        requires_immediate_visit=True,
+        visit_urgency=payload.urgency,
+        patient_message=payload.patient_message,
+        doctor_name=payload.doctor_name,
+    )
+
+    recorded = store.add_intervention(patient_id, intervention)
+    return recorded
+
+
+@app.get("/patients/{patient_id}/interventions", response_model=List[DoctorIntervention])
+def get_patient_interventions(patient_id: str):
+    """Returns all recorded physician interventions for the patient."""
+    patient = store.get_patient(patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail=f"Patient '{patient_id}' not found.")
+    return store.get_patient_interventions(patient_id)
+
+
 @app.post("/parse-note")
 def parse_note(payload: ParseNoteRequest):
     """
@@ -193,6 +286,24 @@ def parse_note(payload: ParseNoteRequest):
     with automatic deterministic keyword fallback.
     """
     return parse_text(payload.text)
+
+
+@app.post("/parse-to-checkin")
+def parse_to_checkin(payload: ParseNoteRequest):
+    """
+    Analyzes a free-text patient note and extracts suggested structured
+    check-in metrics (facial pain, congestion, fever, rash, etc.) for UI auto-fill.
+    """
+    return map_note_to_checkin(payload.text)
+
+
+@app.get("/stats")
+def get_stats():
+    """
+    Returns high-level triage statistics and clinical adherence metrics
+    for the clinician overview dashboard.
+    """
+    return store.get_triage_stats()
 
 
 @app.post("/seed")

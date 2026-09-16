@@ -148,6 +148,44 @@ def parse_text(raw_text: str) -> Dict[str, Any]:
     return keyword_fallback_parse(raw_text)
 
 
+def map_note_to_checkin(raw_text: str) -> Dict[str, Any]:
+    """
+    Extracts symptoms, side effects, and estimated severity from a patient note
+    and formats them directly into check-in fields for one-click form auto-fill.
+    """
+    parsed = parse_text(raw_text)
+    mentions = [m.lower() for m in parsed.get("symptom_mentions", [])]
+    red_flags = [rf.lower() for rf in parsed.get("red_flag_keywords", [])]
+    raw_lower = raw_text.lower()
+
+    # Side effects
+    has_rash = any("rash" in x or "hive" in x for x in red_flags + mentions) or "rash" in raw_lower or "hive" in raw_lower
+    has_diarrhea = any("diarrhea" in x for x in mentions) or "diarrhea" in raw_lower
+    has_nausea = any("nausea" in x or "vomit" in x for x in mentions) or "nausea" in raw_lower
+
+    # Core symptoms
+    has_fever = any("fever" in x or "chill" in x or "temp" in x for x in mentions) or "fever" in raw_lower
+    has_facial_pain = any("pain" in x or "pressure" in x or "cheek" in x or "sinus" in x or "forehead" in x or "headache" in x for x in mentions) or "pain" in raw_lower or "pressure" in raw_lower
+    has_congestion = any("congestion" in x or "stuffy" in x or "blocked" in x or "runny" in x or "nasal" in x for x in mentions) or "congest" in raw_lower or "stuffy" in raw_lower
+
+    severity = parsed.get("severity_guess", 3)
+
+    return {
+        "suggested_symptoms": {
+            "facial_pain": severity if has_facial_pain else (1 if "better" in raw_lower or "clear" in raw_lower else 2),
+            "congestion": severity if has_congestion else (1 if "clear" in raw_lower else 2),
+            "fever": has_fever,
+            "energy": max(1, min(5, 6 - severity)),
+        },
+        "suggested_side_effects": {
+            "rash": has_rash,
+            "diarrhea": has_diarrhea,
+            "nausea": has_nausea,
+        },
+        "raw_parsed": parsed,
+    }
+
+
 if __name__ == "__main__":
     sample_notes = [
         "Fever broke yesterday. Pressure is still present but starting to ease.",

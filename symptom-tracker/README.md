@@ -55,14 +55,20 @@ symptom-tracker/
 
 ## Clinical Innovations
 
-1. **Adherence vs. Resistance Differentiation**:
+1. **Closing the Loop with Doctor Interventions**:
+   - Clinicians can log targeted interventions directly against flagged alerts:
+     - `SWITCH_MEDICATION`: Switches failing antibiotics (e.g. Amoxicillin $\rightarrow$ Augmentin) and automatically updates the patient's active prescription.
+     - `REQUEST_IMMEDIATE_VISIT`: Dispatches an **Immediate Clinic Recall / In-Person Visit Notice** to the patient with tailored instructions and urgency level (`SAME_DAY_CLINIC`, `IMMEDIATE_ER`).
+     - `DISCONTINUE_ALLERGY`: Immediately stops medication and charts drug hypersensitivity.
+   - Status updates dynamically: `CRITICAL` $\rightarrow$ `VISIT_REQUESTED` or `RESOLVED`, keeping the clinician triage queue clean.
+2. **Adherence vs. Resistance Differentiation**:
    - If Day 5 symptoms are high and patient took all doses $\longrightarrow$ Flagged as **`CRITICAL`** (Treatment Ineffective / Suspected Resistance).
    - If Day 5 symptoms are high but patient reports missed doses $\longrightarrow$ Flagged as **`WARNING`** (Non-Adherence Risk; counsel on compliance before switching antibiotics).
-2. **Day 9 Course Completion Guard**:
+3. **Day 9 Course Completion Guard**:
    - Prevents premature discontinuation when patients feel better around Day 6–7, mitigating bacterial recurrence and resistance.
-3. **Immediate Patient-Facing Safety Banner**:
+4. **Immediate Patient-Facing Safety Banner**:
    - If `Rash = True` is selected in the patient check-in form, an immediate warning advises the patient of a potential drug allergy.
-4. **AI-Powered Note Parsing**:
+5. **AI-Powered Note Parsing**:
    - Free-text patient notes are parsed with **Groq Cloud (Llama-3.1-8b-instant)** for sub-second symptom extraction, with automatic local keyword fallback if offline.
 
 ---
