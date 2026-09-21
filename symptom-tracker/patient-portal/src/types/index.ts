@@ -41,6 +41,7 @@ export interface CheckIn {
   side_effects: SideEffects;
   adherence: boolean;
   raw_notes: string | null;
+  raw_parsed?: any;
   alerts: Alert[];
 }
 
@@ -84,13 +85,18 @@ export interface ParsedNote {
 }
 
 export interface ParsedCheckIn {
-  facial_pain: number;
-  congestion: number;
-  fever: boolean;
-  energy: number;
-  rash: boolean;
-  nausea: boolean;
-  diarrhea: boolean;
+  suggested_symptoms: {
+    facial_pain: number;
+    congestion: number;
+    fever: boolean;
+    energy: number;
+  };
+  suggested_side_effects: {
+    rash: boolean;
+    nausea: boolean;
+    diarrhea: boolean;
+  };
+  raw_parsed: any;
 }
 
 export interface BaselineTrajectory {

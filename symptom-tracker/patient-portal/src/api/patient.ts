@@ -80,6 +80,7 @@ export interface CheckInPayload {
   };
   adherence: boolean;
   raw_notes?: string;
+  raw_parsed?: any;
 }
 
 export function submitCheckIn(patientId: string, payload: CheckInPayload): Promise<CheckIn> {

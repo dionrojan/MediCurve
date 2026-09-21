@@ -62,6 +62,7 @@ class CheckInRequest(BaseModel):
     side_effects: Optional[SideEffects] = Field(default_factory=SideEffects)
     adherence: bool = Field(default=True, description="Whether prescribed doses were taken as directed")
     raw_notes: Optional[str] = Field(default=None, description="Patient's free-text notes")
+    raw_parsed: Optional[Dict[str, Any]] = Field(default=None, description="AI extraction reasoning")
 
 
 class CreatePatientRequest(BaseModel):
@@ -251,6 +252,7 @@ def create_checkin(patient_id: str, payload: CheckInRequest):
         side_effects=payload.side_effects or SideEffects(),
         adherence=payload.adherence,
         raw_notes=payload.raw_notes,
+        raw_parsed=payload.raw_parsed,
     )
 
     recorded = store.add_checkin(patient_id, checkin)

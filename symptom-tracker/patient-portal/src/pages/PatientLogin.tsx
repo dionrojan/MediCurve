@@ -1,34 +1,52 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Activity, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Activity, Eye, EyeOff, ShieldCheck, Stethoscope } from 'lucide-react';
 import { loginPatient } from '../api/auth';
+import { loginDoctor } from '../api/doctors';
 import { useAuth } from '../hooks/useAuth';
+import { useDoctorAuth } from '../hooks/useDoctorAuth';
 
-const DEMO_USERS = [
+const DEMO_PATIENTS = [
   { id: 'P101', name: 'Marcus Vance',  label: '🟢 On Track',           password: 'medicurve123' },
   { id: 'P102', name: 'Elena Rostova', label: '🔴 Treatment Failure',   password: 'medicurve123' },
   { id: 'P103', name: 'David Kim',     label: '🔴 Allergic Reaction',   password: 'medicurve123' },
 ];
 
+const DEMO_DOCTORS = [
+  { id: 'D100', name: 'Dr. Sarah Chen', label: '🩺 Attending Physician', password: 'medicurve123' },
+];
+
 export function PatientLogin() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { login: doctorLogin } = useDoctorAuth();
   const [patientId, setPatientId] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Detect if the entered ID looks like a doctor ID (starts with D)
+  const isDoctor = patientId.trim().toUpperCase().startsWith('D');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!patientId.trim()) { setError('Patient ID is required.'); return; }
+    if (!patientId.trim()) { setError('ID is required.'); return; }
     if (!password.trim()) { setError('Password is required.'); return; }
     setLoading(true);
     try {
-      const res = await loginPatient(patientId.trim(), password);
-      login(res.patient_id, res.name, res.token);
-      navigate('/patient/dashboard');
+      if (isDoctor) {
+        // Doctor login flow
+        const res = await loginDoctor(patientId.trim(), password);
+        doctorLogin(res.doctor_id, res.name, res.token);
+        navigate('/doctor/dashboard');
+      } else {
+        // Patient login flow
+        const res = await loginPatient(patientId.trim(), password);
+        login(res.patient_id, res.name, res.token);
+        navigate('/patient/dashboard');
+      }
     } catch (e: any) {
       setError(e.message || 'Login failed. Please check your credentials.');
     } finally {
@@ -113,17 +131,34 @@ export function PatientLogin() {
           Stay connected to your recovery.
         </p>
 
+        {/* Role indicator badge */}
+        {patientId.trim() && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 14px', borderRadius: 10, marginBottom: 16,
+            background: isDoctor ? '#f5f3ff' : '#f0f9ff',
+            border: `1px solid ${isDoctor ? '#ede9fe' : '#bae6fd'}`,
+          }}>
+            {isDoctor
+              ? <Stethoscope size={15} color="#7c3aed" />
+              : <Activity size={15} color="#0ea5e9" />}
+            <span style={{ fontSize: 13, fontWeight: 600, color: isDoctor ? '#6d28d9' : '#0369a1' }}>
+              {isDoctor ? 'Signing in as Doctor' : 'Signing in as Patient'}
+            </span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} noValidate>
-          {/* Patient ID */}
+          {/* ID field */}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontWeight: 600, fontSize: 14, color: '#374151', marginBottom: 6 }}>
-              Patient ID
+              {isDoctor ? 'Doctor ID' : 'Patient ID'}
             </label>
             <input
               type="text"
               value={patientId}
               onChange={e => setPatientId(e.target.value)}
-              placeholder="e.g. P101"
+              placeholder={isDoctor ? 'e.g. D100' : 'e.g. P101'}
               autoComplete="username"
               style={{
                 width: '100%', padding: '12px 16px',
@@ -214,11 +249,11 @@ export function PatientLogin() {
 
         {/* Demo accounts */}
         <div style={{ marginTop: 28 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>
-            Demo Accounts
+          <p style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Demo Patients
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {DEMO_USERS.map(u => (
+            {DEMO_PATIENTS.map(u => (
               <button
                 key={u.id}
                 onClick={() => fillDemo(u.id, u.password)}
@@ -227,8 +262,7 @@ export function PatientLogin() {
                   borderRadius: 10, padding: '10px 14px',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   cursor: 'pointer', fontSize: 13, fontFamily: 'inherit',
-                  transition: 'border-color 0.15s',
-                  color: '#374151',
+                  transition: 'border-color 0.15s', color: '#374151',
                 }}
                 onMouseEnter={e => ((e.currentTarget as HTMLElement).style.borderColor = '#0ea5e9')}
                 onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0')}
@@ -238,8 +272,33 @@ export function PatientLogin() {
               </button>
             ))}
           </div>
+
+          <p style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8, marginTop: 16 }}>
+            Demo Doctors
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {DEMO_DOCTORS.map(u => (
+              <button
+                key={u.id}
+                onClick={() => fillDemo(u.id, u.password)}
+                style={{
+                  background: '#f5f3ff', border: '1px solid #ede9fe',
+                  borderRadius: 10, padding: '10px 14px',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  cursor: 'pointer', fontSize: 13, fontFamily: 'inherit',
+                  transition: 'border-color 0.15s', color: '#374151',
+                }}
+                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.borderColor = '#7c3aed')}
+                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.borderColor = '#ede9fe')}
+              >
+                <span><strong>{u.id}</strong> — {u.name}</span>
+                <span style={{ fontSize: 12, color: '#7c3aed', fontWeight: 600 }}>{u.label}</span>
+              </button>
+            ))}
+          </div>
+
           <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 8, textAlign: 'center' }}>
-            Password for all demo accounts: <code style={{ background: '#f1f5f9', padding: '1px 6px', borderRadius: 4 }}>medicurve123</code>
+            Password for all accounts: <code style={{ background: '#f1f5f9', padding: '1px 6px', borderRadius: 4 }}>medicurve123</code>
           </p>
         </div>
       </div>

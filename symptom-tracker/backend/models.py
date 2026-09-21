@@ -59,6 +59,7 @@ class CheckIn(BaseModel):
     side_effects: SideEffects = Field(default_factory=SideEffects)
     adherence: bool = Field(default=True, description="Whether prescribed doses were taken as directed")
     raw_notes: Optional[str] = Field(default=None, description="Patient's free-text notes")
+    raw_parsed: Optional[dict] = Field(default=None, description="AI extraction reasoning")
     alerts: List[Alert] = Field(default_factory=list, description="Signals evaluated by alert engine")
 
 

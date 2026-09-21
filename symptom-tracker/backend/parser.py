@@ -121,7 +121,7 @@ def parse_text(raw_text: str) -> Dict[str, Any]:
             )
 
             response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
+                model="qwen/qwen3.8-27b",
                 messages=[
                     {"role": "system", "content": prompt_system},
                     {"role": "user", "content": raw_text},
